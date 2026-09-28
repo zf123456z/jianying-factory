@@ -1,5 +1,5 @@
 """剪映工厂 - 定位剪映安装目录和草稿路径"""
-import os, glob, json
+import os
 
 def find_jianying_root():
     """定位剪映专业版安装根目录"""
@@ -31,7 +31,7 @@ def get_draft_path():
         with open(cfg, encoding="utf-8") as f:
             for line in f:
                 if line.startswith("currentCustomDraftPath="):
-                    return line.split("=",1)[1].strip()
+                    return line.split("=", 1)[1].strip()
     return os.path.join(root, "User Data", "Projects", "com.lveditor.draft")
 
 def list_drafts():
