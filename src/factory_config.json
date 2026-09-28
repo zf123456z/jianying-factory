@@ -1,0 +1,21 @@
+{
+  "draft_root": "D:\\AI工作区\\剪映草稿",
+  "export_root": "D:\\AI工作区\\导出",
+  "backup_root": "D:\\AI工作区\\剪映草稿_备份",
+  "default_video": "E:\\张总口播素材\\张总形象.mp4",
+  "voiceover_dir": "D:\\AI工作区\\配音",
+  "bgm_dir": "D:\\AI工作区\\BGM",
+  "canvas_width": 1080,
+  "canvas_height": 1920,
+  "fps": 30,
+  "video_volume": 0.0,
+  "voice_volume": 1.0,
+  "bgm_volume": 0.35,
+  "default_voice": "云希",
+  "quality": {
+    "bgm_volume_min": 0.30,
+    "bgm_volume_max": 0.40,
+    "require_subtitle": true,
+    "align_tolerance_ms": 500
+  }
+}
