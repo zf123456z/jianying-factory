@@ -1,56 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-剪映工厂 - 剪映标准启动器（受控窗口内启动，已实测跑通）
-============================================================
+剪映工厂 - 剪映标准启动器（受控窗口内启动，v7.7.1 实测定死）
+================================================================
 【重要】必须在 computer_use_tool(plane="cu") 的代码环境里调用，
-不能在 PowerShell/Bash 里直接跑本脚本 —— 因为本脚本依赖
-seed_computer_use 的 list_apps / launch_app 能力。
+不能在 PowerShell/Bash 里直接跑本脚本 —— 本脚本依赖 seed_computer_use。
 
-正确用法：把下方 LAUNCH() 函数体复制进 computer_use_tool 的 code 参数执行。
+正确用法（在 computer_use_tool 里）：
+    1. cu.screenshot() 截图 → 外层 OCR 定位「剪映专业版」桌面图标中心
+       （图标随桌面布局移动，必须每次现截图现定位，不固定坐标）
+    2. from launch_jianying import LAUNCH
+       LAUNCH(icon_center=(x, y), max_wait_s=40)   # 双击 + 轮询首页
 
-为什么必须这样启动（踩坑记录）：
+为什么必须这样启动（踩坑记录，v7.7.1 重新定死）：
 ❌ subprocess.Popen 直接启动主程序 -> 剪映进程在后台起来了，但窗口
-   不会出现在受控桌面视图里，uiautomation 也找不到主窗口，等于白启动
-✅ cu.list_apps() 找到剪映精确名称 -> cu.launch_app(精确名称)
-   -> 剪映窗口正确出现在受控桌面里，用户登录态完整保留
+   不会出现在受控桌面视图里（uiautomation 找得到窗口、截图却看不到），白启动
+❌ cu.list_apps() + launch_app -> 受控窗口应用清单实测无剪映（官方安装版
+   未注册进受控应用目录），launch_app 拒绝
+✅ 受控桌面 OCR 定位「剪映专业版」桌面图标 -> cu.left_double(图标中心)
+   -> 剪映窗口正确出现在受控桌面视图（2026-09-29 实测：双击后约25s首页出现，
+   含开始创作/草稿列表/SVIP 状态，登录态完整保留）
+✅ 复用：若截图已见剪映首页/编辑页，直接复用不重复启动（效率关键）
 
-常见坑：
-- launch_app 只接受 list_apps() 返回的精确 App.name（含 # 后缀唯一ID），
-  名称大小写、缺后缀都会被拒绝
-- 应用列表里会有「卸载剪映专业版」干扰项，必须过滤掉
-- launch_app 返回 accepted_unverified 是正常的（请求已接受、窗口
-  还未确认可见），继续轮询截图即可，不要重复 launch
+剪映真实主程序：C:\Users\HuaWei\AppData\Local\JianyingPro\Apps\11.5.0.14471\JianyingPro.exe
+（D:\JianyingPro\ 是便携旧版托盘，勿用；启动前可先 taskkill 旧进程避免抢占）
 """
 import time
 
 
-def LAUNCH(max_wait_s: int = 60) -> str:
-    """在受控桌面里启动剪映，返回最终状态说明。"""
+def LAUNCH(icon_center: tuple = (20, 725), max_wait_s: int = 45) -> str:
+    """在受控桌面双击剪映图标启动，轮询截图直到首页出现。"""
     import seed_computer_use as cu
-
-    apps = cu.list_apps()
-    matches = [
-        a for a in apps
-        if ("剪映专业版" in a.name and "卸载" not in a.name)
-    ]
-    if len(matches) != 1:
-        return f"ERROR: 剪映匹配项数量异常: {[a.name for a in matches]}"
-
-    name = matches[0].name
-    print(f"✅ 找到剪映: {name}")
-
-    result = cu.launch_app(name)
-    print(f"🚀 启动结果: {result}")
-
+    print(f"🎯 双击受控桌面剪映图标: {icon_center}")
+    cu.left_double(*icon_center)
     waited = 0
     while waited < max_wait_s:
-        time.sleep(4)
-        waited += 4
+        time.sleep(5)
+        waited += 5
         cu.screenshot()
-        print(f"⏳ 等待剪映窗口: {waited}s")
+        print(f"⏳ 等待剪映就绪: {waited}s")
     cu.screenshot()
-    return "OK: 剪映已在受控桌面打开（已等待窗口出现）"
+    return f"OK: 已双击启动剪映（等待{waited}s，请外层 OCR 确认首页/草稿列表出现）"
 
 
 if __name__ == "__main__":
