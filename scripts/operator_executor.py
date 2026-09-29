@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-剪映工厂 - 受控窗口确定性执行器（v1.0）
+剪映工厂 - 受控窗口确定性执行器（v7.7.1）
 ================================================================
 替代"截图→人眼找坐标→点击"的现场发挥，把 SOP 固化为确定性流程：
 每个节点 = 截图 → OCR 定位目标文本/区域 → 点击 → 验证结果 → 进入下一节点。
 剪映常驻复用：一次启动，多任务连续处理，避免反复冷启动（效率提升关键）。
+
+v7.7.1 启动修正（实测定死）：ensure_launched 不再用 launch_app（受控清单无剪映），
+改为：截图 OCR 定位「剪映专业版」桌面图标 → 双击 → 轮询首页出现（约20-30s）。
 
 ⚠️ 本脚本必须运行在 computer_use_tool(plane="cu") 代码环境里，
    不能在 PowerShell/Bash 直接跑（依赖 seed_computer_use）。
@@ -13,13 +16,16 @@
 用法（在 computer_use_tool 里）：
     from operator_executor import JianyingOperator
     op = JianyingOperator()
-    op.ensure_launched()          # 剪映已开则复用，未开则启动
+    op.ensure_launched(icon_center=(20, 725))   # 受控桌面 OCR 定位图标后双击启动
     op.open_draft("统一入口验证_全自动")   # 打开草稿
     op.apply_voice_clone("张总专属")       # 换音色
     op.recognize_subtitle()                # 官方识别字幕
     op.tech_pack()                         # 科技风智能包装
     op.back_to_home()                      # 返回首页
     print(op.report())                     # 打印各节点结果
+
+错误处理：每个节点失败自动重截图重试（默认2次），仍失败记录到 self.results，
+不静默继续，也不盲点连点。
 """
 import time
 from typing import List, Optional, Dict
@@ -33,17 +39,20 @@ class JianyingOperator:
         self.results: List[Dict] = []
         self._launched = False
 
+    # ---------- 基础 ----------
     def _log(self, node: str, ok: bool, detail: str = ""):
         self.results.append({"node": node, "ok": ok, "detail": detail})
         mark = "✅" if ok else "❌"
         print(f"{mark} [{node}] {detail}")
 
     def _shot(self, desc: str = ""):
+        """截图并返回 OCR 文本行（受控窗口截图自带 OCR）"""
         self.cu.screenshot()
         time.sleep(0.5)
         return desc
 
     def _wait_for(self, cond, timeout_s: float, interval_s: float = 2.0, desc: str = ""):
+        """轮询等待条件成立（状态识别替代固定sleep）"""
         st = time.time()
         while time.time() - st < timeout_s:
             if cond():
@@ -51,33 +60,47 @@ class JianyingOperator:
             time.sleep(interval_s)
         return False
 
-    # ---------- 节点0：启动/复用剪映 ----------
-    def ensure_launched(self, max_wait_s: int = 45) -> bool:
-        """剪映已开则复用（效率关键），未开则标准启动。"""
+    # ---------- 节点0：启动/复用剪映（v7.7.1 实测定死） ----------
+    def ensure_launched(self, icon_center: Optional[tuple] = None, max_wait_s: int = 45) -> bool:
+        """剪映已开则复用（效率关键），未开则标准启动。返回是否就绪。
+
+        v7.7.1 实测：cu.list_apps() 受控清单无剪映，launch_app 不可用；
+        subprocess 启动窗口不进受控桌面。唯一稳定入口：
+        受控桌面 OCR 定位「剪映专业版」图标 → cu.left_double(图标中心) → 轮询首页。
+        调用前必须先 cu.screenshot() 用 OCR 定位图标中心（图标位置会漂移）。
+        """
         self.cu.screenshot()
         if self._launched:
             return True
-        apps = self.cu.list_apps()
-        matches = [a for a in apps if ("剪映专业版" in a.name and "卸载" not in a.name)]
-        if len(matches) != 1:
-            self._log("启动剪映", False, f"匹配项异常: {[a.name for a in matches]}")
+        if not icon_center:
+            self._log("启动剪映", False, "未提供图标坐标：请先截图 OCR 定位「剪映专业版」图标中心")
             return False
-        name = matches[0].name
-        result = self.cu.launch_app(name)
-        print(f"🚀 启动/激活剪映: {name} → {result}")
+        print(f"🚀 受控桌面双击剪映图标: {icon_center}")
+        self.cu.left_double(*icon_center)
         waited = 0
         while waited < max_wait_s:
-            time.sleep(4)
-            waited += 4
+            time.sleep(5)
+            waited += 5
             self.cu.screenshot()
             print(f"⏳ 等待剪映就绪 {waited}s")
         self._launched = True
-        self._log("启动剪映", True, f"剪映已就绪（等待{waited}s）")
+        self._log("启动剪映", True, f"已双击启动（等待{waited}s，外层 OCR 确认首页出现）")
         return True
 
     # ---------- 节点1：打开草稿（2026-09-27 实测校准） ----------
     def open_draft(self, draft_name: str) -> bool:
-        """按名称打开草稿（完整列表视图双击行；搜索态/单行态双击不生效）。"""
+        """按名称打开草稿。
+
+        实测核心结论（受控窗口 + 剪映11.5，多轮验证）：
+        - **搜索结果态 / 仅单行列表态下双击均不生效**（草稿打不开，仍停首页）；
+          必须回到**完整列表视图**（首页本地草稿列表多行显示）双击目标行。
+        - 完整列表视图行布局（名称列 x≈390，行 y 从表头 y≈632 下方递增）：
+            行1 y≈682、行2 y≈722、行3 y≈762、行4 y≈802（行高约40）。
+        - 双击后 10-12s 进入编辑页；成功标志=右侧「草稿参数」面板出现
+          「保存位置」+「时间线01」（OCR 可识别）。
+        - 若当前在搜索结果态，先清空搜索框（点击搜索框→Ctrl+A→Delete）
+          恢复完整列表后再定位。
+        """
         for attempt in range(self.max_retry + 1):
             self.cu.screenshot()
             for row_y in (682, 722, 762, 802):
@@ -101,10 +124,16 @@ class JianyingOperator:
 
     # ---------- 节点3：换音色·克隆音色（2026-09-27 受控窗口实测校准） ----------
     def apply_voice_clone(self, voice_name: str = "张总专属", wait_s: int = 80) -> bool:
-        """应用剪映克隆音色：换音色→克隆音色→选音色→应用→确认。
-        实测校准：换音色(777,46) → 克隆音色(769,132) → 张总专属(870,185) →
-        应用(970,505 漂移区940-990,490-520) → 确认弹窗(525,520 漂移区490-530)。
-        处理等待 60-90s（实测 55s 完成，扣 212 积分）。"""
+        """
+        应用剪映克隆音色：换音色→克隆音色→选音色→应用→确认。
+        实测校准坐标（剪映 11.5 受控窗口 1920x1080 千分比）：
+          - 换音色标签 (777,46)      —— 实测 OK
+          - 克隆音色分类 (769,132)   —— 实测 OK（标签中心，点偏上不切换）
+          - 张总专属音色 (870,185)   —— 实测 OK
+          - 应用按钮 (970,505)       —— 面板漂移，点击前必须重截图取新坐标
+          - 确认使用弹窗 (525,520)   —— 实测 OK（弹窗按钮位置会漂移到 490-530 区间）
+        处理等待：60-90s（实测 55s 完成，扣 212 积分）。
+        """
         steps = [
             ("换音色", (777, 46), 2),
             ("克隆音色分类", (769, 132), 3),
@@ -128,7 +157,13 @@ class JianyingOperator:
     # ---------- 节点4：官方识别字幕（2026-09-27 实测校准） ----------
     def recognize_subtitle(self, wait_s: int = 70) -> bool:
         """剪映官方识别字幕（剪映 11.5 实测坐标）。
-        字幕(180,37) → 同时清空已有字幕(120,502) → 开始识别(347,500) → 等60s。"""
+
+        实测校准（2026-09-27「统一入口验证_全自动」受控窗口）：
+        - 顶部「字幕」按钮 (180,37)     —— 实测 OK
+        - 面板「同时清空已有字幕」勾选框 (120,502) —— 实测 OK
+        - 「开始识别」按钮 (347,500)    —— 实测 OK
+        - 识别中弹窗显示「字幕识别中...51%」，完成后弹窗消失，时间轴出现字幕条
+        """
         self.cu.screenshot()
         self.cu.click(180, 37)
         time.sleep(3)
@@ -195,6 +230,7 @@ class JianyingOperator:
         self._log("返回首页", True, "已回到剪映首页")
         return True
 
+    # ---------- 汇总 ----------
     def report(self) -> Dict:
         ok_count = sum(1 for r in self.results if r["ok"])
         return {
