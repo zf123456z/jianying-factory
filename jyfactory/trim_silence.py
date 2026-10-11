@@ -9,12 +9,15 @@
 """
 import subprocess
 import os
-import tempfile
 
 
 def detect_silence(audio_path: str, noise_db: int = -30, min_silence_ms: int = 300):
     """用ffmpeg silencedetect检测音频里的静音段"""
-    cmd = ["ffmpeg", "-i", audio_path, "-af", f"silencedetect=noise={noise_db}dB:d={min_silence_ms/1000}", "-f", "null", "-"]
+    cmd = [
+        "ffmpeg", "-i", audio_path,
+        "-af", f"silencedetect=noise={noise_db}dB:d={min_silence_ms/1000}",
+        "-f", "null", "-"
+    ]
     result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore")
     stderr = result.stderr
 
@@ -26,19 +29,24 @@ def detect_silence(audio_path: str, noise_db: int = -30, min_silence_ms: int = 3
             end = float(line.split("silence_end:")[1].split("|")[0].strip())
             silences.append((start, end))
 
-    cmd2 = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", audio_path]
+    cmd2 = [
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", audio_path
+    ]
     total = float(subprocess.run(cmd2, capture_output=True, text=True).stdout.strip())
     return silences, total
 
 
-def _compile_keep_segments(silences, total, head_silence_ms=200, tail_silence_ms=200, mid_max_ms=800, mid_target_ms=250):
+def _compile_keep_segments(silences, total, head_silence_ms=200, tail_silence_ms=200,
+                           mid_max_ms=800, mid_target_ms=250):
     """计算要保留的音频段（去首尾 + 压缩中间长停顿）"""
     keep = []
+
     start = 0.0
     if silences and silences[0][0] < 0.1:
         start = max(0.0, silences[0][1] - head_silence_ms / 1000)
 
-    for s, e in silences:
+    for i, (s, e) in enumerate(silences):
         if s < start + 0.05:
             continue
         dur = (e - s) * 1000
@@ -55,14 +63,13 @@ def _compile_keep_segments(silences, total, head_silence_ms=200, tail_silence_ms
         end = min(total, end)
     if start < end - 0.05:
         keep.append((start, end))
+
     return keep
 
 
 def trim_silence(audio_path: str, output_path: str = None, head_silence_ms: int = 200,
                  tail_silence_ms: int = 200, mid_max_ms: int = 800, mid_target_ms: int = 250):
-    """
-    智能剪口播：去首尾静音 + 压缩中间过长停顿
-    """
+    """智能剪口播：去首尾静音 + 压缩中间过长停顿"""
     if output_path is None:
         base, ext = os.path.splitext(audio_path)
         output_path = base + "_trimmed" + ext
@@ -94,7 +101,11 @@ def trim_silence(audio_path: str, output_path: str = None, head_silence_ms: int 
         print(f"   保留段{i+1}: {s:.2f}s ~ {e:.2f}s（{e-s:.2f}s）")
 
     if len(merged) == 1:
-        cmd = ["ffmpeg", "-y", "-ss", str(merged[0][0]), "-i", audio_path, "-t", str(merged[0][1] - merged[0][0]), "-c:a", "libmp3lame", "-q:a", "2", output_path]
+        cmd = [
+            "ffmpeg", "-y", "-ss", str(merged[0][0]), "-i", audio_path,
+            "-t", str(merged[0][1] - merged[0][0]),
+            "-c:a", "libmp3lame", "-q:a", "2", output_path
+        ]
     else:
         parts = []
         for s, e in merged:
@@ -102,11 +113,19 @@ def trim_silence(audio_path: str, output_path: str = None, head_silence_ms: int 
         inputs = [str(i) for i in range(len(merged))]
         filter_complex = "".join(f"[{i}:a]atrim=0:{merged[i][1]-merged[i][0]:.3f},asetpts=PTS-STARTPTS[a{i}];" for i in range(len(merged)))
         filter_complex += "".join(f"[a{i}]" for i in range(len(merged))) + f"concat=n={len(merged)}:v=0:a=1[outa]"
-        cmd = ["ffmpeg", "-y", *parts, "-filter_complex", filter_complex, "-map", "[outa]", "-c:a", "libmp3lame", "-q:a", "2", output_path]
+        cmd = [
+            "ffmpeg", "-y", *parts,
+            "-filter_complex", filter_complex,
+            "-map", "[outa]", "-c:a", "libmp3lame", "-q:a", "2", output_path
+        ]
     result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore")
     if result.returncode != 0:
         print(f"⚠️ 智能裁剪失败（{result.stderr[-200:]}），回退只剪首尾")
-        cmd2 = ["ffmpeg", "-y", "-ss", str(keep[0][0]), "-i", audio_path, "-t", str(keep[-1][1] - keep[0][0]), "-c:a", "libmp3lame", "-q:a", "2", output_path]
+        cmd2 = [
+            "ffmpeg", "-y", "-ss", str(keep[0][0]), "-i", audio_path,
+            "-t", str(keep[-1][1] - keep[0][0]),
+            "-c:a", "libmp3lame", "-q:a", "2", output_path
+        ]
         subprocess.run(cmd2, capture_output=True)
     print(f"✅ 智能剪口播完成：{output_path}")
     return output_path, keep[0][0], keep[-1][1]

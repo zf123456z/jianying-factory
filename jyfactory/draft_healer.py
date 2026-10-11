@@ -95,6 +95,7 @@ def auto_heal_draft(draft_path: str) -> bool:
             print(f"  ... 还有 {len(fixed)-10} 个")
     else:
         print("✅ 草稿结构完整，无需修复")
+
     return True
 
 

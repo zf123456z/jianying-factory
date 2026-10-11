@@ -6,10 +6,9 @@
 【价值】剪映草稿引用素材改为草稿内相对路径（assets/<type>/<name>），
         素材随草稿走——服务端草稿被清理/移动/换机都不丢素材。
 
-规则：
-  - materials.videos / audios / images 的 path 若指向草稿外，复制进草稿
-    assets/video|audio|image/ 并改写为相对路径
-  - 已在草稿内/相对路径的跳过；文件缺失则报告
+用法：
+    from .self_contain import self_contain_draft
+    fixed = self_contain_draft(r"D:/AI工作区/剪映草稿/我的草稿")
 """
 import json
 import os
@@ -33,7 +32,7 @@ def self_contain_draft(draft_dir: str, dry_run: bool = False) -> dict:
             if not path:
                 continue
             if path.startswith("assets/") or path.startswith("assets\\"):
-                continue  # 已自包含
+                continue
             src = path
             if not os.path.isabs(src):
                 src = os.path.join(draft_dir, src)

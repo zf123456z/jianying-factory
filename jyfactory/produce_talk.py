@@ -4,7 +4,7 @@
 剪映工厂 - 口播视频统一生产模板 v1.0（v8.0 主路径）
 ================================================================
 用法：一句话口播任务 → 本模板 → 剪映草稿箱
-流程：文案 → SAMI官方TTS配音(剪映正版音色) → 默认形象循环铺满 → BGM铺满
+流程：文案 → SAMI官方TTS配音(剪映正版音色) → 主素材循环铺满 → BGM铺满
       → 高亮标题(关键词标红/黄+打字机动画) → 部署草稿箱（不导出）
 
 参数（改 MAIN 区即可）：
@@ -14,28 +14,28 @@
   HIGHLIGHTS 额外高亮词 [{word,color,bold,size}]
 """
 import sys, os, json, subprocess, shutil, glob
-from . import config  # 路径单一真源（config.py 为唯一权威）
+from . import config
 
 from .tts import tts_speak
 from .engine import JianyingVectcutEngine
 
-# ================= MAIN 区（每次任务改这里） =================
 PROJECT_NAME = "口播模板_示例"
 SCRIPT = "这是示例文案。AI获客，关键就三步。"
 TITLE = "AI获客关键三步"
 TITLE_HIGHLIGHTS = [{"word": "GEO", "color": "#FF3B30", "bold": True, "size": 16},
                     {"word": "AI", "color": "#FFD400", "bold": True, "size": 16}]
-SPEAKER = "zh_male_huoli"      # 剪映正版音色；克隆音色可传 ID
-VIDEO = config.DEFAULT_VIDEO   # 固定素材
-BGM_VOL = 0.35                  # 用户铁律：30-40%
-BGM_QUERY = "科技"              # 云端音乐关键词（剪映官方曲库，正版零侵权）
+SPEAKER = "zh_male_huoli"
+VIDEO = config.DEFAULT_VIDEO
+BGM_VOL = 0.35
+BGM_QUERY = "科技"
+BGM_PREFER = getattr(config, "DEFAULT_BGM", None) or ""
 VOICE_DIR = config.VOICE_DIR
 DRAFT_ROOT = config.DRAFT_DIR
-# ============================================================
 
 
 def pick_bgm():
-    """从剪映本地缓存音乐目录挑一首时长合适的正版音乐（无自定义偏好时）"""
+    if BGM_PREFER and os.path.exists(BGM_PREFER):
+        return BGM_PREFER
     music_dir = os.path.expandvars(r"%LOCALAPPDATA%\JianyingPro\User Data\Cache\music")
     cands = glob.glob(os.path.join(music_dir, "*.mp3")) if os.path.isdir(music_dir) else []
     for c in cands:
@@ -62,7 +62,6 @@ def main():
     if not eng.ensure_server():
         print("❌ VectCutAPI 不可用"); return
 
-    # 1. SAMI 官方配音（剪映正版音色）
     voice = tts_speak(SCRIPT, speaker=SPEAKER,
                       out=os.path.join(VOICE_DIR, f"{PROJECT_NAME}_配音.wav"))
     if not voice:
@@ -72,7 +71,6 @@ def main():
     dur = float(r.stdout.strip())
     print(f"✅ 配音完成: {dur:.1f}s（{SPEAKER}）")
 
-    # 2. 建草稿
     draft_id = eng.create_draft(1080, 1920)
     pos = 0.0
     while pos < dur:
@@ -82,20 +80,17 @@ def main():
         pos += end
     eng.add_audio(draft_id, voice, volume=1.0, track_name="audio_main")
 
-    # 3. 云端正版音乐 BGM（按主题词搜索，显式传配音时长铺满截断）
     try:
         eng.add_cloud_music(draft_id, BGM_QUERY, volume=BGM_VOL, end=dur)
     except Exception as e:
         print(f"⚠️ 云端音乐失败({e})，回退本地缓存音乐")
         eng.add_audio(draft_id, loop_bgm(pick_bgm(), dur), volume=BGM_VOL, track_name="bgm")
 
-    # 4. 高亮标题（打字机动画）
     eng.add_rich_text(draft_id, TITLE, TITLE_HIGHLIGHTS,
                       start=0, end=min(6.0, dur),
                       font_size=13.0, transform_y=-0.88,
                       intro_animation="打字机", intro_duration=0.8)
 
-    # 5. 部署
     dest = eng.save_and_deploy(draft_id, PROJECT_NAME)
     print(f"✅ 草稿已部署: {dest}")
     print(f"   时长 {dur:.1f}s | 音色 {SPEAKER} | 标题《{TITLE}》")

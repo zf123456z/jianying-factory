@@ -37,12 +37,15 @@ def check_draft(draft_name: str):
     for track in tracks:
         track_type = track.get("type", "unknown")
         segments = track.get("segments", [])
+
         track_dur = 0
         for seg in segments:
             tr = seg.get("target_timerange", {})
             track_dur += tr.get("duration", 0)
         track_dur_sec = track_dur / 1_000_000
+
         print(f"\n📁 {track_type} 轨道：{len(segments)} 段，总时长 {track_dur_sec:.1f} 秒")
+
         if abs(track_dur - total_dur * 1_000_000) > 1_000_000:
             issues.append(f"⚠️ {track_type}轨道时长 {track_dur_sec:.1f}s 和总时长 {total_dur:.1f}s 差了 {abs(track_dur_sec - total_dur):.1f}s")
 
@@ -54,6 +57,7 @@ def check_draft(draft_name: str):
     else:
         print("✅ 所有轨道时长一致，没有问题！")
     print("=" * 60)
+
     return issues
 
 

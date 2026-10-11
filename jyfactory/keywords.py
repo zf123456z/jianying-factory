@@ -6,7 +6,6 @@
 """
 import re
 
-# 爆款关键词词典
 HOT_WORDS = [
     "三步法", "AI获客", "GEO", "生成式引擎优化", "2024", "普通人",
     "赚钱", "副业", "流量", "转化", "免费", "干货", "避坑",
@@ -15,13 +14,9 @@ HOT_WORDS = [
     "免费领", "领取", "私信", "关注", "转发",
 ]
 
+
 def extract_keywords(script: str, max_keywords: int = 5):
-    """
-    从文案里提取需要高亮的关键词
-    :param script: 口播文案
-    :param max_keywords: 最多提取几个关键词
-    :return: 关键词列表
-    """
+    """从文案里提取需要高亮的关键词"""
     found = []
     for word in HOT_WORDS:
         if word in script and word not in found:
@@ -29,7 +24,6 @@ def extract_keywords(script: str, max_keywords: int = 5):
         if len(found) >= max_keywords:
             break
 
-    # 如果词典里没找到，就提取引号里的短语
     if len(found) < 3:
         quotes = re.findall(r'[""「](.*?)[""」]', script)
         for q in quotes:

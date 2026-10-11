@@ -1,5 +1,6 @@
 """剪映工厂 - 定位剪映安装目录和草稿路径"""
-import os
+import os, glob, json
+
 
 def find_jianying_root():
     """定位剪映专业版安装根目录"""
@@ -12,6 +13,7 @@ def find_jianying_root():
             return c
     return None
 
+
 def find_latest_version(root):
     """找到最新版本目录"""
     apps_dir = os.path.join(root, "Apps")
@@ -20,6 +22,7 @@ def find_latest_version(root):
     versions = [d for d in os.listdir(apps_dir) if os.path.isdir(os.path.join(apps_dir, d))]
     versions.sort(reverse=True)
     return os.path.join(apps_dir, versions[0]) if versions else None
+
 
 def get_draft_path():
     """读取当前草稿路径（从globalSetting）"""
@@ -34,6 +37,7 @@ def get_draft_path():
                     return line.split("=", 1)[1].strip()
     return os.path.join(root, "User Data", "Projects", "com.lveditor.draft")
 
+
 def list_drafts():
     """列出所有草稿"""
     draft_path = get_draft_path()
@@ -45,6 +49,7 @@ def list_drafts():
         if os.path.isdir(full):
             drafts.append({"name": d, "path": full})
     return drafts
+
 
 if __name__ == "__main__":
     root = find_jianying_root()
