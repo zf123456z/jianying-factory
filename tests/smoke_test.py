@@ -17,6 +17,7 @@
  13. ★铺满截断断言：BGM 轨时长 == 主视频轨时长（无片尾黑屏/音乐提前结束）
  14. ★时长一致断言：视频/BGM/人声三轨时长一致（±0.15s 容差）
  15. ★local_material_id 非空断言：全部媒体素材 id 非空（防剪映媒体丢失）
+ 16. ★单行自适应断言：长文案自动缩字号单行放下、短句不缩小（2026-10-13 用户规则）
 """
 import json
 import os
@@ -47,6 +48,16 @@ def _track_duration(tracks, name, ttype):
 def test_imports():
     from jyfactory import JianyingFactory, JianyingVectcutEngine, CloudManager
     check("包导入", JianyingFactory and JianyingVectcutEngine and CloudManager)
+
+
+def test_single_line_fit():
+    """铁律：一句话尽量不换行，超宽先缩字号（2026-10-13 用户规则）"""
+    from jyfactory.engine import auto_fit_font_size
+    long_text = "这是一个用于验证单行自适应字号是否生效的极端超长文案测试字符串用来确认缩小分支能够正常工作的测试文案内容"
+    fs2, fitted = auto_fit_font_size(long_text, 20.0, bold=True)
+    check("单行自适应(长文案缩字号)", fs2 < 20.0 and fitted, f"{20.0}→{fs2}")
+    fs3, _ = auto_fit_font_size("AI获客 就三步", 16.0)
+    check("单行自适应(短句不缩小)", abs(fs3 - 16.0) < 0.01, f"{16.0}→{fs3}")
 
 
 def test_engine_full_flow():
@@ -154,6 +165,7 @@ def test_engine_full_flow():
 def main():
     test_imports()
     test_engine_full_flow()
+    test_single_line_fit()
     print("=" * 50)
     print(f"通过 {len(PASS)} | 失败 {len(FAIL)}")
     if FAIL:
