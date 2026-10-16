@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """剪映工厂 v7.8 - VectCutAPI 确定性执行内核"""
 import json
+import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +24,50 @@ def safe_transform_y(font_size: float, desired: float) -> float:
     else:
         limit = 0.60
     return round(max(-limit, min(limit, desired)), 3)
+
+
+# =====================================================================
+# 单行自适应字号（2026-10-13 用户规则：一句话尽量不换行，超宽缩字号）
+# =====================================================================
+def _text_width_px(text: str, font_size: float, bold: bool = False) -> float:
+    """估算整句文字像素宽度（保守口径：中文≈1.15×字号，英文/数字≈0.7×字号，
+    空格≈0.4×字号；加粗×1.08）。宁缩不溢——按真实渲染可能更宽的保守值估算。"""
+    if not text:
+        return 0.0
+    w = 0.0
+    for ch in text:
+        if ch == " ":
+            w += font_size * 0.4
+        elif ord(ch) > 255:
+            w += font_size * 1.15         # 中文/全角（保守，覆盖宽字体）
+        else:
+            w += font_size * 0.7          # 英文/数字/半角
+    if bold:
+        w *= 1.08
+    return w
+
+
+def auto_fit_font_size(text: str, font_size: float, canvas_width: int = 1080,
+                       max_ratio: float = 0.80, min_size: float = 6.0,
+                       bold: bool = False) -> tuple:
+    """单行自适应字号：超宽时缩小字号让整句一行放下（尽量不换行）。
+
+    max_ratio: 最大行宽占画布比例（0.80，比服务端 line_max_width=0.82 更保守，
+               保证单行放得下、不会触发换行；2026-10-13 用户规则）
+    min_size: 字号下限；缩到下限仍超 → 返回下限（由服务端 force_apply 换行兜底，绝不出屏）
+    返回 (new_font_size, fitted)；fitted=False 表示已到下限、允许换行兜底
+    """
+    if not text:
+        return font_size, True
+    max_px = canvas_width * max_ratio
+    w = _text_width_px(text, font_size, bold=bold)
+    if w <= max_px:
+        return font_size, True
+    # 缩小比例 = 最大宽 / 估算宽；0.97 保守系数留误差余量；取整到 0.5 档
+    fitted = math.floor(font_size * max_px / w * 0.97 * 2) / 2.0
+    if fitted < min_size:
+        return min_size, False
+    return max(fitted, 1.0), True
 
 TEXT_INTRO_MAP = {
     "打字机": "打字机_I", "随机打字机": "随机打字机", "打字机_I": "打字机_I",
@@ -248,7 +294,25 @@ class JianyingVectcutEngine:
     def add_subtitle(self, draft_id: str, srt_path: str,
                      font_size: float = 9.0, font_color: str = "#FFD400",
                      background_alpha: float = 0.3, bold: bool = True,
-                     keywords: list = None) -> bool:
+                     keywords: list = None, auto_fit: bool = True) -> bool:
+        # 单行自适应字号：按 SRT 最长一句统一整组字幕字号（2026-10-13 用户规则）
+        if auto_fit:
+            longest = ""
+            try:
+                txt = open(srt_path, encoding="utf-8").read()
+                for block in re.split(r"\n\s*\n", txt.strip()):
+                    lines = block.splitlines()
+                    if len(lines) < 2:
+                        continue
+                    seg = " ".join(x.strip() for x in lines[2:] if x.strip())
+                    if len(seg) > len(longest):
+                        longest = seg
+            except Exception:
+                longest = ""
+            if longest:
+                fs_new, _ = auto_fit_font_size(longest, font_size, bold=bold)
+                if abs(fs_new - font_size) > 0.01:
+                    font_size = fs_new
         payload = {
             "draft_id": draft_id, "srt": srt_path, "font_size": font_size,
             "font_color": font_color, "bold": bold,
@@ -290,10 +354,20 @@ class JianyingVectcutEngine:
                  intro_animation: str = None, intro_duration: float = 0.5,
                  outro_animation: str = None, outro_duration: float = 0.5,
                  text_styles: list = None,
-                 track_name: str = None, auto_layer: bool = True) -> bool:
+                 track_name: str = None, auto_layer: bool = True,
+                 auto_fit: bool = True) -> bool:
         if auto_layer and track_name is None:
             track_name = self._free_text_track(draft_id, start, end)
         track_name = track_name or "text_main"
+        # 单行自适应字号（2026-10-13 用户规则：先缩字号尽量单行，再按最终字号过安全线）
+        fitted_note = ""
+        if auto_fit:
+            fs_new, fitted = auto_fit_font_size(text, font_size, bold=bold)
+            if abs(fs_new - font_size) > 0.01:
+                fitted_note = f" [字号{font_size:g}→{fs_new:g} 单行适配]"
+                font_size = fs_new
+            elif not fitted:
+                fitted_note = " [已达最小字号,允许换行兜底]"
         transform_y = safe_transform_y(font_size, transform_y)
         payload = {
             "draft_id": draft_id, "text": text, "start": start, "end": end,
@@ -320,7 +394,8 @@ class JianyingVectcutEngine:
         if ok:
             self._text_slots.setdefault(draft_id, []).append((start, end))
             self._slot_by_track.setdefault((draft_id, track_name), []).append((start, end))
-            self._log("添加标题", ok, text + (f" [动画:{intro_animation or ''}]" if intro_animation else "") + f" [轨:{track_name}]")
+            self._log("添加标题", ok, text + (f" [动画:{intro_animation or ''}]" if intro_animation else "")
+                      + fitted_note + f" [轨:{track_name}]")
         else:
             self._log("添加标题", ok, text + " " + str(out.get("error", ""))[:60])
         return ok
