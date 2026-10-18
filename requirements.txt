@@ -1,0 +1,24 @@
+# 剪映工厂 jyfactory 依赖清单
+# 安装：python -m pip install -r requirements.txt
+# 说明：pyJianYingDraft 由 VectCutAPI 内核内置精简版提供，无需单独安装
+
+# ===== 核心必须依赖 =====
+websockets>=12.0          # SAMI 剪映官方音色 TTS
+edge-tts>=6.1.0           # 配音兜底（微软云希等自然音色）
+requests>=2.31.0          # HTTP 客户端
+flask>=3.0.0              # VectCutAPI 本地内核服务（localhost:9001）
+imageio>=2.31.0           # VectCutAPI 服务端依赖
+psutil>=5.9.0             # VectCutAPI 服务端依赖
+oss2>=2.18.0              # VectCutAPI 云资源依赖
+json5>=0.9.14             # 草稿 JSON5 解析
+Pillow>=10.0.0            # 封面/头像/字幕样式图片处理
+
+# ===== 可选依赖（按需安装，不装不影响核心出片） =====
+# playwright>=1.40.0      # 网页录制成片（advanced.web_to_video）
+# pynput>=1.7.6           # 屏幕录制鼠标轨迹（advanced.record_screen）
+
+# ===== 环境说明 =====
+# ffmpeg：需安装并加入 PATH（https://ffmpeg.org/download.html），
+#         用于配音时长探测/预览/抽帧/转码；缺失时核心出片不受阻
+# 剪映专业版：需安装（https://www.capcut.cn），11.5 版本实测最优
+# seed_computer_use：豆包受控窗口环境自带，用于剪映 GUI 自动化

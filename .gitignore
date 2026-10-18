@@ -1,0 +1,15 @@
+# 历史归档（已下线，不进版本库）
+_archive/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 本地配置（含用户专属路径，不入库）
+config.json
+
+# 工作产物（配音/导出/草稿均在 D:\AI工作区 其他目录）
+*.wav
+*.srt
+*.mp3

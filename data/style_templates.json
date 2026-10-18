@@ -1,0 +1,257 @@
+{
+  "meta": {
+    "version": "1.0",
+    "updated": "2026-10-12",
+    "design_note": "全部参数来自行业调研（开拍/剪映官方模板/快影/秒剪/度加/创客贴/Canva/稿定），非自创。命名体系：口播模板·{风格}·{场景}。安全线：所有 transform_y 自动过 safe_transform_y 校验（≤10→±0.8 / 11-16→±0.75 / >16→±0.6），transform_x 限幅 ±0.45。",
+    "usage": "用户一句话→选样式→只替换文字内容/素材/声音→出片",
+    "rollback_note": "2026-10-12 用户验收复盘：P0 新增 8 条（同质化+长文案不换行出屏隐患）已回滚，保留原有 8 条"
+  },
+  "templates": [
+    {
+      "code": "pop-yellow",
+      "name": "口播模板·爆款黄·带货",
+      "scene": "爆款卖点/带货口播/产品种草",
+      "source": "抖音带货爆款黄字 / 稿定爆款黄",
+      "layers": [
+        {
+          "role": "标题",
+          "font_size": 16,
+          "font_color": "#FFD400",
+          "border_width": 1.0,
+          "border_color": "#000000",
+          "transform_y": 0.75,
+          "bold": true,
+          "background_alpha": 0.0
+        },
+        {
+          "role": "副标题",
+          "font_size": 10,
+          "font_color": "#FFFFFF",
+          "border_width": 0.4,
+          "border_color": "#000000",
+          "transform_y": 0.55,
+          "background_alpha": 0.0
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.5
+        }
+      ]
+    },
+    {
+      "code": "tech-blue",
+      "name": "口播模板·科技蓝·AI话题",
+      "scene": "AI/科技/数码/前沿话题",
+      "source": "科技类视频蓝字惯例 / 度加科技感一键包装",
+      "layers": [
+        {
+          "role": "标题",
+          "font_size": 16,
+          "font_color": "#00BFFF",
+          "border_width": 0.6,
+          "border_color": "#FFFFFF",
+          "transform_y": 0.75,
+          "bold": true,
+          "background_alpha": 0.0
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.45
+        }
+      ]
+    },
+    {
+      "code": "big-impact",
+      "name": "口播模板·大字冲击·爆款观点",
+      "scene": "强观点/爆款开头/金句封面",
+      "source": "创客贴大字封面 / 开拍知识类大字+色块 / Canva爆款大字 / 稿定爆款吸睛大字",
+      "layers": [
+        {
+          "role": "大字",
+          "font_size": 22,
+          "font_color": "#FFD400",
+          "border_width": 1.2,
+          "border_color": "#000000",
+          "transform_y": 0.3,
+          "background_alpha": 0.85,
+          "bold": true
+        },
+        {
+          "role": "副标题",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.4,
+          "border_color": "#000000",
+          "transform_y": 0.62,
+          "background_alpha": 0.35
+        },
+        {
+          "role": "金句高亮",
+          "font_size": 8,
+          "font_color": "#FFFFFF",
+          "border_width": 0.3,
+          "border_color": "#000000",
+          "transform_y": 0.8,
+          "background_alpha": 0.3,
+          "highlight_word": "错过",
+          "highlight_color": "#FF3B30"
+        }
+      ]
+    },
+    {
+      "code": "segment-highlight",
+      "name": "口播模板·分段高亮·知识金句",
+      "scene": "知识分享/教程/金句语录",
+      "source": "开拍金句弹出 / 知识类分段重点标注",
+      "layers": [
+        {
+          "role": "顶部标题",
+          "font_size": 12,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": 0.75,
+          "background_alpha": 0.0
+        },
+        {
+          "role": "金句",
+          "font_size": 14,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": 0.1,
+          "background_alpha": 0.25,
+          "highlight_word": "普通人",
+          "highlight_color": "#FFD400"
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.4
+        }
+      ]
+    },
+    {
+      "code": "title-subtitle",
+      "name": "口播模板·经典款·资讯口播",
+      "scene": "经典口播/资讯/新闻评论",
+      "source": "VectCut 口播模板基础款",
+      "layers": [
+        {
+          "role": "标题",
+          "font_size": 12,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": 0.75,
+          "background_alpha": 0.0
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.4
+        }
+      ]
+    },
+    {
+      "code": "typewriter",
+      "name": "口播模板·打字机·悬念教程",
+      "scene": "悬念开头/教程/故事叙述",
+      "source": "剪映官方打字机动画 / 字幕逐字出现",
+      "layers": [
+        {
+          "role": "标题",
+          "font_size": 16,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": 0.3,
+          "background_alpha": 0.0,
+          "bold": true,
+          "intro_animation": "打字机",
+          "intro_duration": 1.0
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.4
+        }
+      ]
+    },
+    {
+      "code": "center-beat",
+      "name": "口播模板·大字居中卡点·强观点",
+      "scene": "情绪输出/强观点/卡点节奏",
+      "source": "快影卡点变装 / 情绪卡点大字",
+      "layers": [
+        {
+          "role": "大字",
+          "font_size": 20,
+          "font_color": "#FFFFFF",
+          "border_width": 0.8,
+          "border_color": "#000000",
+          "transform_y": 0.15,
+          "background_alpha": 0.6,
+          "bold": true
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.4
+        }
+      ]
+    },
+    {
+      "code": "split-compare",
+      "name": "口播模板·左右分屏·对比讲解",
+      "scene": "对比讲解/正反对照/二选一",
+      "source": "开拍罗振宇同款分屏 / 快影分屏讲解",
+      "layers": [
+        {
+          "role": "左标题",
+          "font_size": 12,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_x": -0.45,
+          "transform_y": 0.4,
+          "background_alpha": 0.0,
+          "bold": true
+        },
+        {
+          "role": "右标题",
+          "font_size": 12,
+          "font_color": "#FFD400",
+          "border_width": 0.0,
+          "transform_x": 0.45,
+          "transform_y": 0.4,
+          "background_alpha": 0.0,
+          "bold": true
+        },
+        {
+          "role": "字幕",
+          "font_size": 9,
+          "font_color": "#FFFFFF",
+          "border_width": 0.0,
+          "transform_y": -0.8,
+          "background_alpha": 0.4
+        }
+      ]
+    }
+  ]
+}
